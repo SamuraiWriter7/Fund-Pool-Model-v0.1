@@ -1,0 +1,846 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/fund-pool-model-v0.1.schema.json",
+  "title": "Fund Pool Model v0.1 Schema",
+  "description": "JSON Schema for Platform Revenue Share Pool / Fund Pool Model v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["fund_pool_model"],
+  "properties": {
+    "fund_pool_model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version",
+        "status",
+        "purpose",
+        "design_principles",
+        "participants",
+        "scope",
+        "fund_pool",
+        "policy_constants",
+        "eligibility",
+        "metrics",
+        "quality_filter",
+        "fraud_detection",
+        "scoring",
+        "normalization",
+        "allocation",
+        "payout_policy",
+        "execution_flow",
+        "transparency",
+        "governance",
+        "failure_modes",
+        "implementation_notes",
+        "roadmap"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "const": "Platform Revenue Share Pool"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^0\\.1$"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "proposed", "experimental", "stable"]
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1
+        },
+        "design_principles": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "participants": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["payer", "contributors", "beneficiaries"],
+          "properties": {
+            "payer": {
+              "$ref": "#/$defs/payer"
+            },
+            "contributors": {
+              "$ref": "#/$defs/contributors"
+            },
+            "beneficiaries": {
+              "$ref": "#/$defs/beneficiaries"
+            }
+          }
+        },
+        "scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "included_data",
+            "excluded_data",
+            "privacy_policy"
+          ],
+          "properties": {
+            "included_data": {
+              "$ref": "#/$defs/stringArray"
+            },
+            "excluded_data": {
+              "$ref": "#/$defs/stringArray"
+            },
+            "privacy_policy": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["approach", "note"],
+              "properties": {
+                "approach": {
+                  "type": "string",
+                  "enum": [
+                    "clustered_and_anonymized_processing",
+                    "anonymized_processing",
+                    "aggregated_processing"
+                  ]
+                },
+                "note": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        },
+        "fund_pool": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source", "pool_rate", "formula", "notes"],
+          "properties": {
+            "source": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["primary", "secondary"],
+              "properties": {
+                "primary": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "secondary": {
+                  "$ref": "#/$defs/stringArray"
+                },
+                "future_optional": {
+                  "$ref": "#/$defs/stringArray"
+                }
+              }
+            },
+            "pool_rate": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "formula": {
+              "type": "string",
+              "minLength": 1
+            },
+            "notes": {
+              "$ref": "#/$defs/stringArray"
+            }
+          }
+        },
+        "policy_constants": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "pool_rate",
+            "min_credit_payout",
+            "max_volume_cap",
+            "suspicion_review_threshold",
+            "plan_weights",
+            "score_weights",
+            "quality_thresholds"
+          ],
+          "properties": {
+            "pool_rate": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "min_credit_payout": {
+              "type": "number",
+              "minimum": 0
+            },
+            "max_volume_cap": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "suspicion_review_threshold": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "plan_weights": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["free", "pro", "pro_plus"],
+              "properties": {
+                "free": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "pro": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "pro_plus": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "score_weights": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "acceptance",
+                "uniqueness",
+                "edit_quality",
+                "retention",
+                "reuse",
+                "trust"
+              ],
+              "properties": {
+                "acceptance": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "uniqueness": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "edit_quality": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "retention": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "reuse": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "trust": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "quality_thresholds": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "min_events_required",
+                "min_acceptance_rate",
+                "min_retention_rate"
+              ],
+              "properties": {
+                "min_events_required": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "min_acceptance_rate": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "min_retention_rate": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              }
+            }
+          }
+        },
+        "eligibility": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["rules", "result"],
+          "properties": {
+            "rules": {
+              "$ref": "#/$defs/stringArray"
+            },
+            "result": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "metrics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["user_metrics", "derived_rates"],
+          "properties": {
+            "user_metrics": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["fields"],
+              "properties": {
+                "fields": {
+                  "$ref": "#/$defs/stringArray"
+                }
+              }
+            },
+            "derived_rates": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "acceptance_rate",
+                "retention_rate",
+                "reuse_rate"
+              ],
+              "properties": {
+                "acceptance_rate": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "retention_rate": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "reuse_rate": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        },
+        "quality_filter": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["purpose", "rules"],
+          "properties": {
+            "purpose": {
+              "type": "string",
+              "minLength": 1
+            },
+            "rules": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/conditionActionRule"
+              }
+            }
+          }
+        },
+        "fraud_detection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "purpose",
+            "signals",
+            "suspicion_score_formula",
+            "hold_rule"
+          ],
+          "properties": {
+            "purpose": {
+              "type": "string",
+              "minLength": 1
+            },
+            "signals": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "multi_account_signal",
+                "low_quality_burst_signal",
+                "self_accept_loop_signal",
+                "duplicate_context_signal"
+              ],
+              "properties": {
+                "multi_account_signal": {
+                  "$ref": "#/$defs/signal"
+                },
+                "low_quality_burst_signal": {
+                  "$ref": "#/$defs/signal"
+                },
+                "self_accept_loop_signal": {
+                  "$ref": "#/$defs/signal"
+                },
+                "duplicate_context_signal": {
+                  "$ref": "#/$defs/signal"
+                }
+              }
+            },
+            "suspicion_score_formula": {
+              "type": "string",
+              "minLength": 1
+            },
+            "hold_rule": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["condition", "action"],
+              "properties": {
+                "condition": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "action": {
+                  "$ref": "#/$defs/stringArray"
+                },
+                "payout_status": {
+                  "type": "string",
+                  "enum": [
+                    "held_for_review",
+                    "carryover_credit",
+                    "subscription_discount",
+                    "usage_credit"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "scoring": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "volume_factor",
+            "trust_score",
+            "quality_score",
+            "fraud_penalty",
+            "raw_score"
+          ],
+          "properties": {
+            "volume_factor": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["type", "formula", "reason"],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["log_capped_volume"]
+                },
+                "formula": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "trust_score": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["formula", "components"],
+              "properties": {
+                "formula": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "components": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "age_factor",
+                    "diversity_factor",
+                    "stability_factor"
+                  ],
+                  "properties": {
+                    "age_factor": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "diversity_factor": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "stability_factor": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              }
+            },
+            "quality_score": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["formula"],
+              "properties": {
+                "formula": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "fraud_penalty": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["formula"],
+              "properties": {
+                "formula": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "raw_score": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["formula"],
+              "properties": {
+                "formula": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        },
+        "normalization": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "purpose",
+            "percentile_cap",
+            "formula_steps",
+            "result"
+          ],
+          "properties": {
+            "purpose": {
+              "type": "string",
+              "minLength": 1
+            },
+            "percentile_cap": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "formula_steps": {
+              "$ref": "#/$defs/stringArray"
+            },
+            "result": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "allocation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["principle", "formula", "notes"],
+          "properties": {
+            "principle": {
+              "type": "string",
+              "minLength": 1
+            },
+            "formula": {
+              "type": "string",
+              "minLength": 1
+            },
+            "notes": {
+              "$ref": "#/$defs/stringArray"
+            }
+          }
+        },
+        "payout_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "priority",
+            "carryover_rule",
+            "payout_types"
+          ],
+          "properties": {
+            "priority": {
+              "type": "string",
+              "minLength": 1
+            },
+            "carryover_rule": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["condition", "action"],
+              "properties": {
+                "condition": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "action": {
+                  "$ref": "#/$defs/stringArray"
+                }
+              }
+            },
+            "payout_types": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["pro_or_pro_plus", "free", "review_hold"],
+              "properties": {
+                "pro_or_pro_plus": {
+                  "$ref": "#/$defs/payoutRule"
+                },
+                "free": {
+                  "$ref": "#/$defs/payoutRule"
+                },
+                "review_hold": {
+                  "$ref": "#/$defs/payoutRule"
+                }
+              }
+            },
+            "future_extensions": {
+              "$ref": "#/$defs/stringArray"
+            }
+          }
+        },
+        "execution_flow": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["monthly_batch"],
+          "properties": {
+            "monthly_batch": {
+              "$ref": "#/$defs/stringArray"
+            }
+          }
+        },
+        "transparency": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["dashboard", "audit_log"],
+          "properties": {
+            "dashboard": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["public_items", "private_items"],
+              "properties": {
+                "public_items": {
+                  "$ref": "#/$defs/stringArray"
+                },
+                "private_items": {
+                  "$ref": "#/$defs/stringArray"
+                }
+              }
+            },
+            "audit_log": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["required_fields"],
+              "properties": {
+                "required_fields": {
+                  "$ref": "#/$defs/stringArray"
+                }
+              }
+            }
+          }
+        },
+        "governance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "principles",
+            "review_cycle",
+            "formula_version"
+          ],
+          "properties": {
+            "principles": {
+              "$ref": "#/$defs/stringArray"
+            },
+            "review_cycle": {
+              "type": "string",
+              "minLength": 1
+            },
+            "formula_version": {
+              "type": "string",
+              "pattern": "^fund_pool_v[0-9]+\\.[0-9]+$"
+            }
+          }
+        },
+        "failure_modes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/failureMode"
+          }
+        },
+        "implementation_notes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mvp_character", "limitations"],
+          "properties": {
+            "mvp_character": {
+              "$ref": "#/$defs/stringArray"
+            },
+            "limitations": {
+              "$ref": "#/$defs/stringArray"
+            }
+          }
+        },
+        "roadmap": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["v0_2", "v0_3", "v1_0"],
+          "properties": {
+            "v0_2": {
+              "$ref": "#/$defs/roadmapItem"
+            },
+            "v0_3": {
+              "$ref": "#/$defs/roadmapItem"
+            },
+            "v1_0": {
+              "$ref": "#/$defs/roadmapItem"
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "payer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "examples", "role"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["platform_operator"]
+        },
+        "examples": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "contributors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "eligible_plans", "requirements"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["opt_in_personal_users"]
+        },
+        "eligible_plans": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": ["free", "pro", "pro_plus"]
+          },
+          "uniqueItems": true
+        },
+        "requirements": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "beneficiaries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "role"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["all_platform_users"]
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "conditionActionRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["condition", "action"],
+      "properties": {
+        "condition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "action": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "signal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["description", "weight"],
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "payoutRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["condition", "action", "payout_type"],
+      "properties": {
+        "condition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "action": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "payout_type": {
+          "type": "string",
+          "enum": [
+            "subscription_discount",
+            "usage_credit",
+            "held_for_review",
+            "carryover_credit"
+          ]
+        }
+      }
+    },
+    "failureMode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["risk", "mitigation"],
+      "properties": {
+        "risk": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mitigation": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "roadmapItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["focus", "additions"],
+      "properties": {
+        "focus": {
+          "type": "string",
+          "minLength": 1
+        },
+        "additions": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    }
+  }
+}
