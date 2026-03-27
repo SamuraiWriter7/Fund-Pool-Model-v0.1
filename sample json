@@ -1,0 +1,399 @@
+{
+  "fund_pool_model": {
+    "name": "Platform Revenue Share Pool",
+    "version": "0.1",
+    "status": "draft",
+    "purpose": "Return value to opt-in AI interaction-data contributors through a monthly pooled allocation model that is operable, auditable, and fraud-aware.",
+    "design_principles": [
+      "Boot the allocation system before pursuing perfect attribution",
+      "Use monthly pooled distribution rather than per-output causal royalty tracing",
+      "Prioritize discounts and usage credits before cash payouts",
+      "Balance fraud resistance, transparency, and operating cost",
+      "Exclude Business and Enterprise contracts in the initial phase"
+    ],
+    "participants": {
+      "payer": {
+        "type": "platform_operator",
+        "examples": [
+          "GitHub",
+          "Microsoft"
+        ],
+        "role": "Provide the fund source and execute monthly allocation"
+      },
+      "contributors": {
+        "type": "opt_in_personal_users",
+        "eligible_plans": [
+          "free",
+          "pro",
+          "pro_plus"
+        ],
+        "requirements": [
+          "User has explicitly opted in to training use",
+          "User is not under a Business or Enterprise contract"
+        ]
+      },
+      "beneficiaries": {
+        "type": "all_platform_users",
+        "role": "Receive the benefit of improved model quality"
+      }
+    },
+    "scope": {
+      "included_data": [
+        "suggestion acceptance events",
+        "modification after acceptance",
+        "7-day retention signals",
+        "reuse signals",
+        "session diversity signals",
+        "context uniqueness signals"
+      ],
+      "excluded_data": [
+        "Business and Enterprise contract data",
+        "opt-out user data",
+        "manual review hold data"
+      ],
+      "privacy_policy": {
+        "approach": "clustered_and_anonymized_processing",
+        "note": "Individual identities are not exposed in public outputs; processing uses anonymized and clustered aggregates."
+      }
+    },
+    "fund_pool": {
+      "source": {
+        "primary": "personal subscription revenue",
+        "secondary": [
+          "carryover unpaid pool"
+        ],
+        "future_optional": [
+          "ad revenue share",
+          "upsell revenue share",
+          "developer support fund"
+        ]
+      },
+      "pool_rate": 0.03,
+      "formula": "fund_pool = personal_subscription_revenue * pool_rate + carryover_pool",
+      "notes": [
+        "Initial target rate is 3 percent of personal subscription revenue",
+        "Business and Enterprise revenue may be excluded during the MVP phase"
+      ]
+    },
+    "policy_constants": {
+      "pool_rate": 0.03,
+      "min_credit_payout": 1.0,
+      "max_volume_cap": 100000,
+      "suspicion_review_threshold": 0.75,
+      "plan_weights": {
+        "free": 0.8,
+        "pro": 1.0,
+        "pro_plus": 1.1
+      },
+      "score_weights": {
+        "acceptance": 0.3,
+        "uniqueness": 0.2,
+        "edit_quality": 0.2,
+        "retention": 0.15,
+        "reuse": 0.1,
+        "trust": 0.05
+      },
+      "quality_thresholds": {
+        "min_events_required": 20,
+        "min_acceptance_rate": 0.05,
+        "min_retention_rate": 0.1
+      }
+    },
+    "eligibility": {
+      "rules": [
+        "user.is_business_account == false",
+        "user.opt_in_training == true",
+        "user.plan_type in [free, pro, pro_plus]"
+      ],
+      "result": "eligible_user_set"
+    },
+    "metrics": {
+      "user_metrics": {
+        "fields": [
+          "user_id",
+          "total_events",
+          "accepted_count",
+          "retained_count",
+          "reused_count",
+          "uniqueness_avg",
+          "edit_quality_avg",
+          "account_trust_score",
+          "suspicion_score",
+          "plan_weight",
+          "raw_score",
+          "normalized_score",
+          "payout_amount",
+          "payout_type",
+          "review_flag"
+        ]
+      },
+      "derived_rates": {
+        "acceptance_rate": "accepted_count / total_events",
+        "retention_rate": "retained_count / accepted_count",
+        "reuse_rate": "reused_count / accepted_count"
+      }
+    },
+    "quality_filter": {
+      "purpose": "Exclude low-quality and low-signal contributions from payout eligibility.",
+      "rules": [
+        {
+          "condition": "total_events < min_events_required",
+          "action": "raw_score = 0"
+        },
+        {
+          "condition": "acceptance_rate < min_acceptance_rate",
+          "action": "raw_score = 0"
+        },
+        {
+          "condition": "retention_rate < min_retention_rate",
+          "action": "raw_score = 0"
+        }
+      ]
+    },
+    "fraud_detection": {
+      "purpose": "Detect gaming attempts such as multi-account farming, burst spam, and acceptance-revert loops.",
+      "signals": {
+        "multi_account_signal": {
+          "description": "Excessive overlap of device, IP, or behavioral patterns across accounts",
+          "weight": 0.3
+        },
+        "low_quality_burst_signal": {
+          "description": "Short-time, high-volume generation activity with weak retention",
+          "weight": 0.25
+        },
+        "self_accept_loop_signal": {
+          "description": "Repeated accept, revert, and regenerate cycles",
+          "weight": 0.25
+        },
+        "duplicate_context_signal": {
+          "description": "Spam-like repetition on near-identical contexts",
+          "weight": 0.2
+        }
+      },
+      "suspicion_score_formula": "0.30 * multi_account_signal + 0.25 * low_quality_burst_signal + 0.25 * self_accept_loop_signal + 0.20 * duplicate_context_signal",
+      "hold_rule": {
+        "condition": "suspicion_score >= suspicion_review_threshold",
+        "action": [
+          "review_flag = true",
+          "raw_score = 0",
+          "queue manual review"
+        ],
+        "payout_status": "held_for_review"
+      }
+    },
+    "scoring": {
+      "volume_factor": {
+        "type": "log_capped_volume",
+        "formula": "log(1 + min(total_events, max_volume_cap))",
+        "reason": "Reward higher event volume without letting extreme input spam dominate the pool"
+      },
+      "trust_score": {
+        "formula": "account_trust_score = 0.4 * age_factor + 0.3 * diversity_factor + 0.3 * stability_factor",
+        "components": {
+          "age_factor": "min(account_age_days / 365, 1.0)",
+          "diversity_factor": "session diversity estimate",
+          "stability_factor": "usage stability estimate"
+        }
+      },
+      "quality_score": {
+        "formula": "quality_score = 0.30 * acceptance_rate + 0.20 * uniqueness_avg + 0.20 * edit_quality_avg + 0.15 * retention_rate + 0.10 * reuse_rate + 0.05 * account_trust_score"
+      },
+      "fraud_penalty": {
+        "formula": "max(0, 1 - suspicion_score)"
+      },
+      "raw_score": {
+        "formula": "raw_score = volume_factor * quality_score * plan_weight * fraud_penalty"
+      }
+    },
+    "normalization": {
+      "purpose": "Prevent a small number of outliers from consuming nearly all monthly pool value.",
+      "percentile_cap": 99,
+      "formula_steps": [
+        "cap_value = percentile(raw_scores, 99)",
+        "adjusted_score_i = min(raw_score_i, cap_value)",
+        "normalized_score_i = adjusted_score_i / sum(all adjusted_score)"
+      ],
+      "result": "normalized score ratio between 0 and 1"
+    },
+    "allocation": {
+      "principle": "Allocate the monthly fund in proportion to normalized contribution score.",
+      "formula": "payout_i = fund_pool * normalized_score_i",
+      "notes": [
+        "If total normalized score is zero, no payout is made for the month",
+        "Users held for review are excluded from immediate payout"
+      ]
+    },
+    "payout_policy": {
+      "priority": "Prefer subscription discounts and usage credits before any cash payout.",
+      "carryover_rule": {
+        "condition": "total_due < min_credit_payout",
+        "action": [
+          "carry amount forward to next month",
+          "set payout_type to carryover_credit"
+        ]
+      },
+      "payout_types": {
+        "pro_or_pro_plus": {
+          "condition": "plan_type in [pro, pro_plus]",
+          "action": [
+            "apply subscription discount",
+            "clear carryover credit"
+          ],
+          "payout_type": "subscription_discount"
+        },
+        "free": {
+          "condition": "plan_type == free",
+          "action": [
+            "grant usage credit",
+            "clear carryover credit"
+          ],
+          "payout_type": "usage_credit"
+        },
+        "review_hold": {
+          "condition": "review_flag == true",
+          "action": [
+            "send item to manual review queue"
+          ],
+          "payout_type": "held_for_review"
+        }
+      },
+      "future_extensions": [
+        "cash micropayment",
+        "wallet payout",
+        "tokenized internal reward unit"
+      ]
+    },
+    "execution_flow": {
+      "monthly_batch": [
+        "load users",
+        "load monthly events",
+        "load monthly subscription revenue",
+        "filter eligible users",
+        "build user metrics",
+        "apply quality filters",
+        "apply fraud detection",
+        "compute raw scores",
+        "normalize scores",
+        "calculate fund pool",
+        "allocate pool",
+        "apply payout policy",
+        "write audit log",
+        "publish dashboard",
+        "execute payouts"
+      ]
+    },
+    "transparency": {
+      "dashboard": {
+        "public_items": [
+          "month",
+          "fund_pool total",
+          "total contributors",
+          "median payout",
+          "clustered distribution view",
+          "formula version"
+        ],
+        "private_items": [
+          "individual raw event logs",
+          "directly identifying attributes"
+        ]
+      },
+      "audit_log": {
+        "required_fields": [
+          "month",
+          "fund_pool",
+          "eligible_users_count",
+          "review_holds_count",
+          "distribution_summary",
+          "score_formula_version"
+        ]
+      }
+    },
+    "governance": {
+      "principles": [
+        "score formula versioning",
+        "annual rule review",
+        "manual review pathway",
+        "future user voting option",
+        "third-party audit compatibility"
+      ],
+      "review_cycle": "annual",
+      "formula_version": "fund_pool_v0.1"
+    },
+    "failure_modes": [
+      {
+        "risk": "Acceptance-rate gaming",
+        "mitigation": [
+          "Use retention rate together with acceptance rate",
+          "Use reuse rate together with acceptance rate",
+          "Run burst-pattern detection"
+        ]
+      },
+      {
+        "risk": "Low-quality volume spam",
+        "mitigation": [
+          "Require minimum event count",
+          "Apply quality filters",
+          "Detect duplicate-context spam"
+        ]
+      },
+      {
+        "risk": "Multi-account farming",
+        "mitigation": [
+          "Check identity-overlap patterns",
+          "Use manual review hold for suspicious cases"
+        ]
+      },
+      {
+        "risk": "Extreme concentration among top accounts",
+        "mitigation": [
+          "Apply p99 percentile cap during normalization"
+        ]
+      },
+      {
+        "risk": "Administrative overhead for tiny payouts",
+        "mitigation": [
+          "Carry sub-threshold balances forward as credits"
+        ]
+      }
+    ],
+    "implementation_notes": {
+      "mvp_character": [
+        "Monthly batch operation is sufficient",
+        "Real-time per-output royalty tracing is not required",
+        "Compatible with dashboard-based SaaS and GitHub-style workflows",
+        "Initial accounting and UI complexity remains manageable"
+      ],
+      "limitations": [
+        "Does not measure true causal contribution with full precision",
+        "Still vulnerable to some metric-gaming pressure",
+        "Plan weights may require political and product-level tuning",
+        "Cash payout would require additional tax and KYC design"
+      ]
+    },
+    "roadmap": {
+      "v0_2": {
+        "focus": "quality filter strengthening",
+        "additions": [
+          "longer retention windows",
+          "review pass rate",
+          "stronger quality cluster scoring"
+        ]
+      },
+      "v0_3": {
+        "focus": "cluster-first allocation",
+        "additions": [
+          "anonymous cluster allocation",
+          "secondary intra-cluster distribution"
+        ]
+      },
+      "v1_0": {
+        "focus": "hybrid pool plus simplified shapley",
+        "additions": [
+          "high-value contribution tracing",
+          "partial causal attribution layer",
+          "hybrid precision distribution"
+        ]
+      }
+    }
+  }
+}
