@@ -1,0 +1,355 @@
+fund_pool_model:
+  name: "Platform Revenue Share Pool"
+  version: "0.1"
+  status: "draft"
+  purpose: >
+    AIプラットフォームにおける行動データ貢献者へ、
+    月次基金プール方式で報酬を還元するための最小実装仕様。
+    個別印税型ではなく、粗いが運用可能な分配エンジンを優先する。
+
+  design_principles:
+    - "完全公平より先に制度を起動する"
+    - "個別因果追跡ではなく月次プール分配を採用する"
+    - "現金払いより先に割引・利用クレジット還元を優先する"
+    - "不正耐性・透明性・運用コストの均衡を取る"
+    - "Business/Enterprise系契約は初期対象外とする"
+
+  participants:
+    payer:
+      type: "platform_operator"
+      examples:
+        - "GitHub"
+        - "Microsoft"
+      role: "基金原資の拠出と分配実行"
+
+    contributors:
+      type: "opt_in_personal_users"
+      eligible_plans:
+        - "free"
+        - "pro"
+        - "pro_plus"
+      requirements:
+        - "学習利用にopt-inしていること"
+        - "Business/Enterprise契約ではないこと"
+
+    beneficiaries:
+      type: "all_platform_users"
+      role: "モデル改善の恩恵を受ける利用者全体"
+
+  scope:
+    included_data:
+      - "suggestion acceptance events"
+      - "modification after acceptance"
+      - "7-day retention signals"
+      - "reuse signals"
+      - "session diversity signals"
+      - "context uniqueness signals"
+    excluded_data:
+      - "Business/Enterprise contract data"
+      - "opt-out user data"
+      - "manual review hold data"
+    privacy_policy:
+      approach: "clustered_and_anonymized_processing"
+      note: >
+        個人識別を直接公開せず、匿名化・集約された統計により処理する。
+
+  fund_pool:
+    source:
+      primary: "personal subscription revenue"
+      secondary:
+        - "carryover unpaid pool"
+      future_optional:
+        - "ad revenue share"
+        - "upsell revenue share"
+    pool_rate: 0.03
+    formula: "fund_pool = personal_subscription_revenue * pool_rate + carryover_pool"
+    notes:
+      - "初期値は3%だが、将来は3〜5%帯で調整可能"
+      - "Business/Enterprise収益は初期段階では除外可能"
+
+  policy_constants:
+    pool_rate: 0.03
+    min_credit_payout: 1.00
+    max_volume_cap: 100000
+    suspicion_review_threshold: 0.75
+
+    plan_weights:
+      free: 0.80
+      pro: 1.00
+      pro_plus: 1.10
+
+    score_weights:
+      acceptance: 0.30
+      uniqueness: 0.20
+      edit_quality: 0.20
+      retention: 0.15
+      reuse: 0.10
+      trust: 0.05
+
+    quality_thresholds:
+      min_events_required: 20
+      min_acceptance_rate: 0.05
+      min_retention_rate: 0.10
+
+  eligibility:
+    rules:
+      - "user.is_business_account == false"
+      - "user.opt_in_training == true"
+      - "user.plan_type in [free, pro, pro_plus]"
+    result: "eligible_user_set"
+
+  metrics:
+    user_metrics:
+      fields:
+        - "user_id"
+        - "total_events"
+        - "accepted_count"
+        - "retained_count"
+        - "reused_count"
+        - "uniqueness_avg"
+        - "edit_quality_avg"
+        - "account_trust_score"
+        - "suspicion_score"
+        - "plan_weight"
+        - "raw_score"
+        - "normalized_score"
+        - "payout_amount"
+        - "payout_type"
+        - "review_flag"
+
+    derived_rates:
+      acceptance_rate: "accepted_count / total_events"
+      retention_rate: "retained_count / accepted_count"
+      reuse_rate: "reused_count / accepted_count"
+
+  quality_filter:
+    purpose: "低品質またはノイズ的貢献を初期段階で除外する"
+    rules:
+      - condition: "total_events < min_events_required"
+        action: "raw_score = 0"
+      - condition: "acceptance_rate < min_acceptance_rate"
+        action: "raw_score = 0"
+      - condition: "retention_rate < min_retention_rate"
+        action: "raw_score = 0"
+
+  fraud_detection:
+    purpose: "水増し・多重アカウント・自動受諾ループ等を抑制する"
+    signals:
+      multi_account_signal:
+        description: "device_hash / ip_hash / 行動類似性の過剰重複"
+        weight: 0.30
+      low_quality_burst_signal:
+        description: "短時間大量生成 + 保持率低下"
+        weight: 0.25
+      self_accept_loop_signal:
+        description: "受諾→破棄→再生成の反復"
+        weight: 0.25
+      duplicate_context_signal:
+        description: "同一コンテキスト反復によるスパム"
+        weight: 0.20
+
+    suspicion_score_formula: >
+      suspicion_score =
+      0.30 * multi_account_signal +
+      0.25 * low_quality_burst_signal +
+      0.25 * self_accept_loop_signal +
+      0.20 * duplicate_context_signal
+
+    hold_rule:
+      condition: "suspicion_score >= suspicion_review_threshold"
+      action:
+        - "review_flag = true"
+        - "raw_score = 0"
+        - "payout_status = held_for_review"
+
+  scoring:
+    volume_factor:
+      type: "log_capped_volume"
+      formula: "log(1 + min(total_events, max_volume_cap))"
+      reason: "イベント量の影響を認めつつ、過剰入力の支配を防ぐ"
+
+    trust_score:
+      formula: >
+        account_trust_score =
+        0.4 * age_factor +
+        0.3 * diversity_factor +
+        0.3 * stability_factor
+      components:
+        age_factor: "min(account_age_days / 365, 1.0)"
+        diversity_factor: "session diversity estimate"
+        stability_factor: "usage stability estimate"
+
+    quality_score:
+      formula: >
+        quality_score =
+        0.30 * acceptance_rate +
+        0.20 * uniqueness_avg +
+        0.20 * edit_quality_avg +
+        0.15 * retention_rate +
+        0.10 * reuse_rate +
+        0.05 * account_trust_score
+
+    fraud_penalty:
+      formula: "max(0, 1 - suspicion_score)"
+
+    raw_score:
+      formula: >
+        raw_score =
+        volume_factor *
+        quality_score *
+        plan_weight *
+        fraud_penalty
+
+  normalization:
+    purpose: "上位異常値がプール全体を食い尽くすのを防ぐ"
+    percentile_cap: 99
+    formula_steps:
+      - "cap_value = percentile(raw_scores, 99)"
+      - "adjusted_score_i = min(raw_score_i, cap_value)"
+      - "normalized_score_i = adjusted_score_i / sum(all adjusted_score)"
+    result: "0〜1の比率スコア"
+
+  allocation:
+    principle: "月次基金プールを normalized_score 比で按分する"
+    formula: "payout_i = fund_pool * normalized_score_i"
+    notes:
+      - "total_score が 0 の場合は当月分配なし"
+      - "held_for_review ユーザーは支払い保留"
+
+  payout_policy:
+    priority: "初期段階では現金より割引・利用クレジットを優先"
+    carryover_rule:
+      condition: "total_due < min_credit_payout"
+      action:
+        - "翌月へ繰越"
+        - "payout_type = carryover_credit"
+
+    payout_types:
+      pro_or_pro_plus:
+        condition: "plan_type in [pro, pro_plus]"
+        action:
+          - "subscription_discount を適用"
+          - "carryover_credit をクリア"
+        payout_type: "subscription_discount"
+
+      free:
+        condition: "plan_type == free"
+        action:
+          - "usage_credit を付与"
+          - "carryover_credit をクリア"
+        payout_type: "usage_credit"
+
+      review_hold:
+        condition: "review_flag == true"
+        action:
+          - "manual_review_queue へ送る"
+        payout_type: "held_for_review"
+
+    future_extensions:
+      - "cash micropayment"
+      - "wallet payout"
+      - "tokenized internal reward unit"
+
+  execution_flow:
+    monthly_batch:
+      - "load users"
+      - "load monthly events"
+      - "load monthly subscription revenue"
+      - "filter eligible users"
+      - "build user metrics"
+      - "apply quality filters"
+      - "apply fraud detection"
+      - "compute raw scores"
+      - "normalize scores"
+      - "calculate fund pool"
+      - "allocate pool"
+      - "apply payout policy"
+      - "write audit log"
+      - "publish dashboard"
+      - "execute payouts"
+
+  transparency:
+    dashboard:
+      public_items:
+        - "month"
+        - "fund_pool total"
+        - "total contributors"
+        - "median payout"
+        - "clustered distribution view"
+        - "formula version"
+      private_items:
+        - "individual raw event logs"
+        - "directly identifying attributes"
+    audit_log:
+      required_fields:
+        - "month"
+        - "fund_pool"
+        - "eligible_users_count"
+        - "review_holds_count"
+        - "distribution_summary"
+        - "score_formula_version"
+
+  governance:
+    principles:
+      - "score formula versioning"
+      - "annual rule review"
+      - "manual review pathway"
+      - "future user voting option"
+      - "third-party audit compatibility"
+    review_cycle: "annual"
+    formula_version: "fund_pool_v0.1"
+
+  failure_modes:
+    - risk: "acceptance_rate ハック"
+      mitigation:
+        - "retention_rate を併用"
+        - "reuse_rate を併用"
+        - "burst検知を導入"
+    - risk: "低品質大量投入"
+      mitigation:
+        - "min_events threshold"
+        - "quality filters"
+        - "duplicate context detection"
+    - risk: "多重アカウント"
+      mitigation:
+        - "identity overlap detection"
+        - "manual review hold"
+    - risk: "上位少数への極端集中"
+      mitigation:
+        - "p99 percentile cap"
+    - risk: "少額支払いコスト過多"
+      mitigation:
+        - "carryover credit rule"
+
+  implementation_notes:
+    mvp_character:
+      - "月次バッチ処理で運用可能"
+      - "リアルタイム個別印税計算は不要"
+      - "GitHub連携やSaaSダッシュボードに載せやすい"
+      - "会計・契約・UI実装の初期負荷が低い"
+    limitations:
+      - "真の因果的貢献を精密測定しているわけではない"
+      - "Shapley値型の公平性には未到達"
+      - "plan_weight の設計は政治的調整を要する"
+      - "現金化には税務/KYCの追加設計が必要"
+
+  roadmap:
+    v0_2:
+      focus: "quality filter strengthening"
+      additions:
+        - "longer retention windows"
+        - "review pass rate"
+        - "higher quality cluster scoring"
+
+    v0_3:
+      focus: "cluster-first allocation"
+      additions:
+        - "anonymous cluster allocation"
+        - "secondary intra-cluster distribution"
+
+    v1_0:
+      focus: "hybrid pool + simplified shapley"
+      additions:
+        - "high-value contribution tracing"
+        - "partial causal attribution layer"
+        - "hybrid precision distribution"
