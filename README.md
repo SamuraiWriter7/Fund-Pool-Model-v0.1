@@ -417,6 +417,8 @@ The schema validates:
 required keys
 object structure
 allowed enums
+
+
 numeric ranges
 version and formula-version patterns
 nested section consistency
@@ -454,3 +456,221 @@ Why this matters
 A reward-allocation model becomes much easier to discuss, compare, and implement when its structure is explicit and machine-readable.
 
 This schema is one step toward making AI contribution allocation auditable, portable, and testable.
+
+## API Overview
+
+Fund Pool Model v0.1 can be exposed not only as a specification, but also as an operational API.
+
+The API is designed around six resource groups:
+
+- **fund-pools** — monthly pool creation and allocation runs
+- **metrics** — contribution measurement and scoring
+- **payouts** — payout results, carryover, and execution state
+- **dashboard** — public and private visibility layers
+- **reviews** — fraud holds and manual review workflow
+- **models** — scoring formula versioning and rule metadata
+
+This separation makes the system easier to audit, extend, and implement across SaaS, GitHub-style platforms, or internal allocation services.
+
+---
+
+## Resource Groups
+
+### 1. `fund-pools`
+The accounting core of the system.
+
+This resource handles:
+
+- monthly pool amount
+- eligible revenue base
+- pool calculation runs
+- allocation result listing
+
+Typical endpoints:
+
+- `GET /fund-pools/{month}`
+- `POST /fund-pools/{month}/calculate`
+- `GET /fund-pools/{month}/allocations`
+
+Use this group when you want to answer:
+
+- How large was the fund pool this month?
+- Has the monthly allocation already been calculated?
+- What were the allocation results for a given month?
+
+---
+
+### 2. `metrics`
+The contribution measurement layer.
+
+This resource handles:
+
+- user-level contribution metrics
+- historical score trends
+- anonymized cluster-level metrics
+
+Typical endpoints:
+
+- `GET /metrics/users/{userId}`
+- `GET /metrics/users/{userId}/history`
+- `GET /metrics/clusters/{clusterId}`
+
+Use this group when you want to answer:
+
+- How was a user's contribution score computed?
+- How did a user's score change over time?
+- What does a cluster-level contribution profile look like?
+
+---
+
+### 3. `payouts`
+The value-return layer.
+
+This resource handles:
+
+- payout amount
+- payout type
+- payout state
+- carryover balances
+- payout execution
+
+Typical endpoints:
+
+- `GET /payouts/users/{userId}`
+- `GET /payouts/users/{userId}/history`
+- `GET /payouts/users/{userId}/carryover`
+- `POST /payouts/{payoutId}/execute`
+
+Use this group when you want to answer:
+
+- How much was returned to a contributor this month?
+- Was it paid as discount, usage credit, or carryover?
+- Has the payout already been executed?
+
+---
+
+### 4. `dashboard`
+The visibility layer.
+
+This resource handles:
+
+- public monthly distribution summaries
+- private contributor-facing dashboard data
+
+Typical endpoints:
+
+- `GET /dashboard/public/{month}`
+- `GET /dashboard/private/users/{userId}`
+
+Use this group when you want to answer:
+
+- What should be shown publicly for transparency?
+- What should an individual contributor see in their own dashboard?
+
+---
+
+### 5. `reviews`
+The dispute and fraud-hold layer.
+
+This resource handles:
+
+- suspicious contribution cases
+- manual review queues
+- resolution workflow
+
+Typical endpoints:
+
+- `GET /reviews/cases`
+- `GET /reviews/cases/{caseId}`
+- `POST /reviews/cases/{caseId}/resolve`
+
+Use this group when you want to answer:
+
+- Which cases are currently held for review?
+- Why was a payout suspended?
+- Was a suspicious case approved or rejected?
+
+---
+
+### 6. `models`
+The formula-version layer.
+
+This resource handles:
+
+- current scoring model version
+- historical formula metadata
+- governance-visible rule configuration
+
+Typical endpoints:
+
+- `GET /models/current`
+- `GET /models/{version}`
+
+Use this group when you want to answer:
+
+- Which formula version was used for this payout?
+- What were the score weights in a specific release?
+- How do model versions differ over time?
+
+---
+
+## Minimal MVP Endpoint Set
+
+A full system may expose many endpoints, but the minimum operational set is small.
+
+Recommended MVP:
+
+- `GET /fund-pools/{month}`
+- `POST /fund-pools/{month}/calculate`
+- `GET /metrics/users/{userId}`
+- `GET /payouts/users/{userId}`
+- `GET /dashboard/public/{month}`
+- `GET /reviews/cases`
+- `POST /reviews/cases/{caseId}/resolve`
+- `GET /models/current`
+
+This is enough to support:
+
+- monthly calculation
+- user-level score lookup
+- payout lookup
+- transparency reporting
+- fraud-hold resolution
+- formula version traceability
+
+---
+
+## Design Philosophy
+
+This API is intentionally split by operational responsibility.
+
+- `fund-pools` = accounting core
+- `metrics` = contribution measurement
+- `payouts` = value return
+- `dashboard` = visibility
+- `reviews` = control and exception handling
+- `models` = rule versioning
+
+The goal is not only to compute payouts, but to make the allocation system:
+
+- **auditable**
+- **portable**
+- **versioned**
+- **reviewable**
+- **implementation-friendly**
+
+---
+
+## Why this API structure matters
+
+Reward allocation systems fail when everything is packed into one opaque calculation job.
+
+By separating metrics, allocation, payout, review, and model-version resources, the system becomes easier to:
+
+- inspect
+- test
+- govern
+- debug
+- extend
+
+In other words, this API structure treats allocation not as a black box, but as an operationally visible system.
