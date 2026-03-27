@@ -333,6 +333,8 @@ Positioning
 Fund Pool Model v0.1 is not a full royalty OS.
 It is a bootable allocation engine for platforms that want to move from unpaid contribution loops toward measurable and auditable value return.
 
+
+
 日本語で言えば、これは「完成された印税OS」ではなく、
 印税OSの本丸へ向かうための、最初に回る分配装置です。
 
@@ -355,3 +357,100 @@ Final Note
 Fund Pool Model v0.1 は、
 完全公平を約束する仕様ではありません。
 その代わりに、無還元から還元へ移るための最初の橋を提供します。
+
+## Schema Usage
+
+This repository includes a machine-readable JSON Schema for validating the **Fund Pool Model v0.1** specification.
+
+### Files
+
+- `fund-pool-model-v0.1.schema.json`  
+  JSON Schema definition for the model structure
+
+- `fund-pool-model-v0.1.sample.json`  
+  Example instance that conforms to the schema
+
+---
+
+## What the schema validates
+
+The schema checks that a Fund Pool Model document includes the required structural sections, such as:
+
+- metadata (`name`, `version`, `status`, `purpose`)
+- participants (`payer`, `contributors`, `beneficiaries`)
+- fund pool source and rate
+- policy constants
+- eligibility rules
+- scoring and normalization structure
+- payout policy
+- transparency and governance sections
+- roadmap items
+
+This schema is intended to validate the **shape of the specification**, not the economic correctness of a specific allocation formula.
+
+---
+
+## Validation example
+
+You can validate the sample JSON against the schema using any Draft 2020-12 compatible JSON Schema validator.
+
+### Using Node.js with Ajv
+
+Install Ajv CLI:
+
+```bash
+npm install -g ajv-cli
+
+Validate the sample:
+
+ajv validate \
+  -s fund-pool-model-v0.1.schema.json \
+  -d fund-pool-model-v0.1.sample.json
+
+If the sample is valid, you should see output similar to:
+
+fund-pool-model-v0.1.sample.json valid
+Validation scope
+
+The schema validates:
+
+required keys
+object structure
+allowed enums
+numeric ranges
+version and formula-version patterns
+nested section consistency
+
+The schema does not validate:
+
+whether a scoring formula is economically fair
+whether a payout rule is legally compliant
+whether a fraud threshold is optimal
+whether a roadmap is realistic
+
+Those questions belong to governance, economics, product policy, and implementation review.
+
+Intended use
+
+This schema is useful for:
+
+validating machine-readable model specifications
+keeping multiple spec files structurally consistent
+supporting documentation pipelines
+future conversion to APIs, dashboards, or config systems
+experimentation with alternative allocation models under a shared structure
+Notes
+The schema uses JSON Schema Draft 2020-12
+The sample file is a conforming example, not a production recommendation
+Future versions may introduce stricter validation for formulas, identifiers, or extension blocks
+Recommended workflow
+Edit the model in YAML or JSON
+Convert to JSON if needed
+Validate against fund-pool-model-v0.1.schema.json
+Review governance and economic assumptions separately
+Publish only validated spec files
+Why this matters
+
+A reward-allocation model becomes much easier to discuss, compare, and implement when its structure is explicit and machine-readable.
+
+This schema is one step toward making AI contribution allocation auditable, portable, and testable.
