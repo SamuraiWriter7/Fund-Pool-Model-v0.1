@@ -1,0 +1,83 @@
+digraph FundPoolFlow {
+  graph [
+    rankdir=LR,
+    splines=true,
+    nodesep=0.5,
+    ranksep=0.8,
+    pad=0.2,
+    fontname="Noto Sans CJK JP"
+  ];
+
+  node [
+    shape=box,
+    style="rounded,filled",
+    fillcolor="#F8FAFC",
+    color="#475569",
+    fontname="Noto Sans CJK JP",
+    fontsize=11,
+    margin="0.18,0.10"
+  ];
+
+  edge [
+    color="#64748B",
+    arrowsize=0.8,
+    penwidth=1.2,
+    fontname="Noto Sans CJK JP",
+    fontsize=10
+  ];
+
+  subgraph cluster_main {
+    label="Fund Pool Model v0.1 — 主流れ";
+    color="#CBD5E1";
+    style="rounded";
+
+    fund [label="① 基金\nFund Pool\n\n個人向け収益の一部を基金化\n+ 繰越分を加算", fillcolor="#E0F2FE"];
+    metrics [label="② 計測\nMetrics\n\nacceptance / retention / reuse\nuniqueness / trust を集計", fillcolor="#F1F5F9"];
+    norm [label="③ 正規化\nNormalization\n\n品質フィルタ\n不正検知\np99 cap", fillcolor="#F8FAFC"];
+    alloc [label="④ 分配\nAllocation\n\nnormalized score 比で按分\n月次バッチで計算", fillcolor="#FEF3C7"];
+    payout [label="⑤ 還元\nPayout / Return\n\n割引 / 利用クレジット / 繰越\n必要に応じて保留", fillcolor="#DCFCE7"];
+
+    fund -> metrics [label="原資と対象月"];
+    metrics -> norm [label="生スコア"];
+    norm -> alloc [label="正規化スコア"];
+    alloc -> payout [label="支払額・還元種別"];
+    payout -> fund [label="未払繰越\n次月へ反映", style=dashed, color="#94A3B8"];
+  }
+
+  subgraph cluster_inputs {
+    label="入力";
+    color="#E2E8F0";
+    style="rounded";
+
+    revenue [label="収益データ\nPersonal Subscription Revenue", fillcolor="#FFFFFF"];
+    events [label="行動データ\nInteraction Events", fillcolor="#FFFFFF"];
+    users [label="ユーザー属性\nplan / opt-in / account trust", fillcolor="#FFFFFF"];
+  }
+
+  revenue -> fund;
+  events -> metrics;
+  users -> metrics;
+
+  subgraph cluster_controls {
+    label="統制・可視化";
+    color="#E2E8F0";
+    style="rounded";
+
+    review [label="レビュー保留\nReview Hold\n\n疑義案件を手動審査", fillcolor="#FEE2E2"];
+    dash [label="ダッシュボード\nDashboard\n\n公開統計 / 本人向け表示", fillcolor="#F5F3FF"];
+    audit [label="監査ログ\nAudit Log\n\n月次記録・追跡可能性", fillcolor="#F5F3FF"];
+    model [label="モデル版管理\nModel Version\n\nformula version / rule history", fillcolor="#F5F3FF"];
+  }
+
+  norm -> review [label="疑義スコア閾値超過", color="#DC2626"];
+  review -> alloc [label="承認後に復帰", style=dashed, color="#DC2626"];
+
+  alloc -> dash [style=dashed];
+  payout -> dash [style=dashed];
+  fund -> audit [style=dashed];
+  norm -> audit [style=dashed];
+  alloc -> audit [style=dashed];
+  payout -> audit [style=dashed];
+  model -> norm [style=dashed, label="score rule"];
+  model -> alloc [style=dashed, label="allocation rule"];
+}
